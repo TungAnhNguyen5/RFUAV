@@ -5,10 +5,10 @@ import torch
 from PIL import Image
 import cv2
 from graphic.RawDataProcessor import waterfall_spectrogram_optimized
-from logger import colorful_logger
+from .logger import colorful_logger
 import json
 import numpy as np
-from benchmark import Classify_Model, Detection_Model, is_valid_file, raw_data_ext, image_ext
+from .benchmark import Classify_Model, Detection_Model, is_valid_file, raw_data_ext, image_ext
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 from threading import Lock, Event

@@ -6,14 +6,14 @@ from utils.TwoStagesDetector import TwoStagesDetector
 def main():
 
      # doing a inference on spectrogram image or binary raw frequency data pack using the trained classify model
-    source = ''
-    test = Classify_Model(cfg='',
-                          weight_path='')
+    source = './dataset/valid/YunZhuo-H30'  # for inference test
+    test = Classify_Model(cfg='configs/exp1.3_ResNet50.yaml',
+                          weight_path='models/exp1.3_ResNet50/best_model.pth')
     test.inference(source=source, save_path='./res/')  # for inference test
 
-    # doing a two-stage detector inference on the binary raw frequency data pack using the trained detector and classify model
-    cfg_path = '../example/two_stage/sample.json'
-    TwoStagesDetector(cfg=cfg_path)
+    # # doing a two-stage detector inference on the binary raw frequency data pack using the trained detector and classify model
+    # cfg_path = '../example/two_stage/sample.json'
+    # TwoStagesDetector(cfg=cfg_path)
 
 
 if __name__ == '__main__':

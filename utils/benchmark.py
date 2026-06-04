@@ -267,7 +267,10 @@ class Classify_Model(nn.Module):
         - image (PIL.Image): Image with added result.
         """
         draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype(font, font_size)
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
         draw.text(position, res + f" {probability:.2f}%", fill=text_color, font=font)
 
         return image

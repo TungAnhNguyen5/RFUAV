@@ -1,3 +1,19 @@
 .idea/
 .vscode/
 .gitignore
+.venv/
+__pycache__/
+
+# Ignore dataset folder and model folder
+dataset/
+dataset_backup/
+res/
+models/
+
+# Ignore model folder
+YUNZHUO H12
+YUNZHUO H16
+YUNZHUO H30
+
+# ignore RFUAV_subset
+RFUAV_subset/

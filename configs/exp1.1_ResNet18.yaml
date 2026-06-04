@@ -1,20 +1,17 @@
-train:
-val:
-save_path:
+train: dataset/train
+val: dataset/valid
+save_path: models/exp1.1_ResNet18
 model : resnet18
 weights: None
-batch_size: 8
-image_size: 640
-num_classes: 5
-class_names: [
-        'DJIAVATA2',
-        'DJIFPVCOMBO',
-        'DJIMAVIC3PRO',
-        'DJIMINI3',
-        'DJIMINI4PRO',
-]
-device: 'cuda'
-num_epochs: 150
+batch_size: 16
+image_size: 224
+num_classes: 3
+class_names:
+  YunZhuo-H12: 0
+  YunZhuo-H16: 1
+  YunZhuo-H30: 2
+device: 'cpu'
+num_epochs: 5
 shuffle: True
 lr: 0.0001
 optimizer: None
