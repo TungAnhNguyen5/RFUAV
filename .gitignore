@@ -1,19 +1,43 @@
+# IDE/editor
 .idea/
 .vscode/
-.gitignore
+
+# Python environment/cache
 .venv/
 __pycache__/
+*.pyc
 
-# Ignore dataset folder and model folder
+# Datasets / raw data
 dataset/
 dataset_backup/
-res/
-models/
-
-# Ignore model folder
-YUNZHUO H12
-YUNZHUO H16
-YUNZHUO H30
-
-# ignore RFUAV_subset
+benchmark_data/
 RFUAV_subset/
+YUNZHUO H12/
+YUNZHUO H16/
+YUNZHUO H30/
+
+# Large RF/IQ/data files
+*.iq
+*.dat
+*.bin
+*.mat
+*.npy
+*.npz
+*.rar
+*.zip
+*.tar
+*.tar.gz
+
+# Model checkpoints / trained weights
+models/
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.onnx
+
+# Generated results
+res/
+benchmark_results/
+runs/
+logs/

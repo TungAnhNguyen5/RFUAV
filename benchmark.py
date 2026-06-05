@@ -26,14 +26,14 @@ Returns:
 """
 
 from utils.benchmark import Classify_Model
-
+from scipy.optimize import linear_sum_assignment
 
 def main():
-    source = ''
-    test = Classify_Model(cfg='',
-                          weight_path='')
+    source = './benchmark_data'  # for benchmark test
+    test = Classify_Model(cfg='./configs/exp1.3_ResNet50.yaml',
+                          weight_path='./models/exp1.3_ResNet50/best_model.pth')
     # test.inference(source=source, save_path='./res/')  # for inference test
-    test.benchmark(data_path=source)  # for benchmark test
+    test.benchmark(data_path=source, save_path='./benchmark_results/')  # for benchmark test
 
     """ Two-stage detector test 
     cfg_path = '../example/two_stage/sample.json'

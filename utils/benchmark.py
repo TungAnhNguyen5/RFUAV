@@ -12,6 +12,7 @@ import imageio
 import sys
 import cv2
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 from torch.utils.data import DataLoader
 
 try:
