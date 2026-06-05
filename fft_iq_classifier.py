@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import random
+import shlex
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -329,6 +331,9 @@ def save_confusion_matrix(y_true, y_pred, class_names, save_path: Path):
     fig.savefig(save_path, dpi=200)
     plt.close(fig)
 
+def get_executable_line() -> str:
+    return " ".join(shlex.quote(x) for x in [sys.executable] + sys.argv)
+
 def write_experiment_config(
     args,
     output_dir: Path,
@@ -344,6 +349,10 @@ def write_experiment_config(
     with open(config_path, "w", encoding="utf-8") as f:
         f.write("FFT IQ Classifier Experiment Config\n")
         f.write("===================================\n\n")
+
+        f.write("Executable Line\n")
+        f.write("---------------\n")
+        f.write(get_executable_line() + "\n\n")
 
         f.write("Dataset\n")
         f.write("-------\n")

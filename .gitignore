@@ -39,3 +39,8 @@ res/
 benchmark_results/
 runs/
 logs/
+
+output_iq/
+*.pt
+cache/
+*.npy
