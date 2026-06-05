@@ -1,0 +1,17 @@
+STFT IQ Classifier Experiment Config
+====================================
+
+classes: ['YUNZHUO-H12', 'YUNZHUO-H16', 'YUNZHUO-H30']
+data_root: dataset_iq_balanced
+chunk_size: 32768
+nfft: 512
+hop: 128
+max_time_frames: 0
+max_chunks_per_file: 300
+epochs: 5
+batch_size: 16
+lr: 0.001
+valid_ratio: 0.2
+train_chunks: 720
+valid_chunks: 180
+cache_dir: cache

@@ -30,8 +30,8 @@ from scipy.optimize import linear_sum_assignment
 
 def main():
     source = './benchmark_data'  # for benchmark test
-    test = Classify_Model(cfg='./configs/exp1.3_ResNet50.yaml',
-                          weight_path='./models/exp1.3_ResNet50/best_model.pth')
+    test = Classify_Model(cfg='./configs/exp1.2_ResNet34.yaml',
+                          weight_path='./models/exp1.2_ResNet34/best_model.pth')
     # test.inference(source=source, save_path='./res/')  # for inference test
     test.benchmark(data_path=source, save_path='./benchmark_results/')  # for benchmark test
 

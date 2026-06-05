@@ -1,0 +1,37 @@
+FFT IQ Classifier Experiment Config
+===================================
+
+Dataset
+-------
+classes: ['YUNZHUO-H12', 'YUNZHUO-H16', 'YUNZHUO-H30']
+data_root: dataset_iq_balanced
+total_iq_files: 3
+train_chunks: 480
+valid_chunks: 120
+
+FFT Feature Settings
+--------------------
+chunk_size: 4096
+nfft: 4096
+feature_type: log-magnitude FFT
+window: Hann
+normalization: DC removal + power normalization + per-sample standardization
+max_chunks_per_file: 200
+
+Training Settings
+-----------------
+model: SmallFFT1DCNN
+epochs: 5
+batch_size: 64
+learning_rate: 0.001
+valid_ratio: 0.2
+seed: 42
+
+Output
+------
+output_dir: output_iq/outputs_fft_balanced
+saved_model: best_fft_1dcnn.pt
+confusion_matrix: confusion_matrix.png
+classification_report: classification_report.txt
+best_valid_accuracy: 0.5833
+best_epoch: 5

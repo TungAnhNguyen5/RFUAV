@@ -10,11 +10,9 @@ __pycache__/
 # Datasets / raw data
 dataset/
 dataset_backup/
+dataset_iq/
 benchmark_data/
 RFUAV_subset/
-YUNZHUO H12/
-YUNZHUO H16/
-YUNZHUO H30/
 
 # Large RF/IQ/data files
 *.iq
