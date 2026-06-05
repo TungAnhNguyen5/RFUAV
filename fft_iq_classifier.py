@@ -297,14 +297,10 @@ def evaluate(model, loader, criterion, device):
 def save_confusion_matrix(y_true, y_pred, class_names, save_path: Path):
     cm = confusion_matrix(y_true, y_pred)
 
-    row_sums = cm.sum(axis=1, keepdims=True)
-    cm_norm = cm.astype(np.float32) / np.maximum(row_sums, 1)
+    # Normalize by true class row
+    cm_norm = cm.astype(np.float32) / cm.sum(axis=1, keepdims=True)
 
-    # Also save raw confusion matrix as CSV
-    csv_path = save_path.with_suffix(".csv")
-    np.savetxt(csv_path, cm, fmt="%d", delimiter=",")
-
-    fig, ax = plt.subplots(figsize=(8, 7))
+    fig, ax = plt.subplots(figsize=(7, 6))
     im = ax.imshow(cm_norm, vmin=0.0, vmax=1.0)
 
     ax.set_title("Normalized FFT-based UAV Classifier Confusion Matrix")
@@ -330,12 +326,9 @@ def save_confusion_matrix(y_true, y_pred, class_names, save_path: Path):
 
     fig.colorbar(im, ax=ax)
     fig.tight_layout()
-
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
-    fig.savefig(save_path.with_suffix(".pdf"), bbox_inches="tight")
-
+    fig.savefig(save_path, dpi=200)
     plt.close(fig)
-    
+
 def write_experiment_config(
     args,
     output_dir: Path,
@@ -534,7 +527,7 @@ def main():
                         target_names=class_names,
                     )
                 )
-
+                
     write_experiment_config(
         args,
         output_dir,
