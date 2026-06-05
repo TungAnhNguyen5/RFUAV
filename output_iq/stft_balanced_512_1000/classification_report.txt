@@ -1,9 +1,9 @@
               precision    recall  f1-score   support
 
- YUNZHUO-H12       0.91      0.58      0.71       200
- YUNZHUO-H16       0.97      0.97      0.97       200
- YUNZHUO-H30       0.67      0.92      0.78       200
+ YUNZHUO-H12       1.00      0.99      0.99       200
+ YUNZHUO-H16       1.00      1.00      1.00       200
+ YUNZHUO-H30       0.99      1.00      1.00       200
 
-    accuracy                           0.82       600
-   macro avg       0.85      0.82      0.82       600
-weighted avg       0.85      0.82      0.82       600
+    accuracy                           1.00       600
+   macro avg       1.00      1.00      1.00       600
+weighted avg       1.00      1.00      1.00       600
