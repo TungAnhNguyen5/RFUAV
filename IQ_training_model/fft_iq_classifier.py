@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import yaml
 import argparse
-import hashlib
 import random
+import shlex
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.data import Dataset, DataLoader, Subset
 from tqdm import tqdm
 
 
@@ -23,59 +25,42 @@ def set_seed(seed: int = 42):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+def load_yaml_config(config_path: str | None) -> dict:
+    if config_path is None:
+        return {}
 
-def safe_output_dir(requested: str) -> Path:
-    """
-    Always place relative experiment outputs inside output_iq/.
-    Example:
-        --output-dir stft_balanced_512
-        -> output_iq/stft_balanced_512
-    """
-    output_root = Path("output_iq")
-    requested_path = Path(requested)
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f) or {}
 
-    if requested_path.is_absolute():
-        output_dir = requested_path
-    elif requested_path.parts and requested_path.parts[0] == output_root.name:
-        output_dir = requested_path
-    else:
-        output_dir = output_root / requested_path
+    if not isinstance(config, dict):
+        raise ValueError("YAML config must be a dictionary at the top level.")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir
-
+    return config
 
 def count_complex_samples(path: Path) -> int:
-    """
-    Count usable complex IQ samples.
-    For raw .iq/.dat/.bin files, this assumes float32 interleaved IQ:
-    I0, Q0, I1, Q1, ...
-    Incomplete trailing bytes are ignored.
-    """
     if path.suffix.lower() == ".npy":
         arr = np.load(path, mmap_mode="r")
         if np.iscomplexobj(arr):
             return arr.shape[0]
         return arr.shape[0] // 2
 
-    size_bytes = path.stat().st_size
     itemsize = np.dtype(np.float32).itemsize
+    size_bytes = path.stat().st_size
 
-    usable_float32_values = size_bytes // itemsize
-    usable_float32_values -= usable_float32_values % 2
+    usable_values = size_bytes // itemsize
 
-    dropped_bytes = size_bytes - usable_float32_values * itemsize
-    if dropped_bytes > 0:
-        print(f"Warning: ignoring {dropped_bytes} trailing bytes in {path}")
+    # Need I/Q pairs, so raw float count must be even
+    usable_values = usable_values - (usable_values % 2)
 
-    return usable_float32_values // 2
+    return usable_values // 2
 
 
 def read_iq_chunk(path: Path, start: int, chunk_size: int) -> np.ndarray:
     """
-    Read one complex IQ chunk.
-    Raw files are assumed to be float32 interleaved IQ:
+    Returns complex IQ chunk with shape [chunk_size].
+    Assumes float32 interleaved format:
     I0, Q0, I1, Q1, ...
+    Ignores incomplete trailing bytes.
     """
     if path.suffix.lower() == ".npy":
         arr = np.load(path, mmap_mode="r")
@@ -88,40 +73,30 @@ def read_iq_chunk(path: Path, start: int, chunk_size: int) -> np.ndarray:
 
         return iq.astype(np.complex64)
 
-    size_bytes = path.stat().st_size
     itemsize = np.dtype(np.float32).itemsize
+    size_bytes = path.stat().st_size
 
-    usable_float32_values = size_bytes // itemsize
-    usable_float32_values -= usable_float32_values % 2
+    usable_values = size_bytes // itemsize
+    usable_values = usable_values - (usable_values % 2)
 
     raw = np.memmap(
         path,
         dtype=np.float32,
         mode="r",
-        shape=(usable_float32_values,),
+        shape=(usable_values,),
     )
 
     raw_chunk = raw[2 * start: 2 * (start + chunk_size)]
-    iq = raw_chunk[0::2] + 1j * raw_chunk[1::2]
 
+    iq = raw_chunk[0::2] + 1j * raw_chunk[1::2]
     return iq.astype(np.complex64)
 
 
-def iq_to_stft_feature(
-    iq: np.ndarray,
-    nfft: int,
-    hop: int,
-    max_time_frames: int = 0,
-) -> np.ndarray:
+def iq_to_fft_feature(iq: np.ndarray, nfft: int) -> np.ndarray:
     """
-    Convert one IQ chunk into a log-magnitude STFT/spectrogram feature.
-
-    Output shape:
-        [frequency_bins, time_frames]
+    Converts one IQ chunk into one FFT log-magnitude feature vector.
+    Output shape: [nfft]
     """
-    if iq.size < nfft:
-        raise ValueError(f"IQ chunk is shorter than nfft: {iq.size} < {nfft}")
-
     iq = iq.astype(np.complex64)
 
     # Remove DC offset
@@ -131,63 +106,35 @@ def iq_to_stft_feature(
     power = np.mean(np.abs(iq) ** 2)
     iq = iq / np.sqrt(power + 1e-8)
 
-    num_frames = 1 + (len(iq) - nfft) // hop
+    # Window before FFT
+    window = np.hanning(len(iq)).astype(np.float32)
+    iq = iq * window
 
-    # Vectorized framing without copying the full signal repeatedly
-    frames = np.lib.stride_tricks.as_strided(
-        iq,
-        shape=(num_frames, nfft),
-        strides=(hop * iq.strides[0], iq.strides[0]),
-        writeable=False,
-    )
+    # FFT
+    spectrum = np.fft.fftshift(np.fft.fft(iq, n=nfft))
 
-    window = np.hanning(nfft).astype(np.float32)
-    frames = frames * window[None, :]
-
-    spectrum = np.fft.fftshift(np.fft.fft(frames, n=nfft, axis=1), axes=1)
-    spec = np.log1p(np.abs(spectrum)).astype(np.float32)
-
-    # Shape: [freq, time]
-    spec = spec.T
-
-    # Optional time cropping to keep tensors manageable
-    if max_time_frames > 0 and spec.shape[1] > max_time_frames:
-        spec = spec[:, :max_time_frames]
+    # Log magnitude
+    mag = np.log1p(np.abs(spectrum)).astype(np.float32)
 
     # Per-sample standardization
-    spec = (spec - spec.mean()) / (spec.std() + 1e-8)
+    mag = (mag - mag.mean()) / (mag.std() + 1e-8)
 
-    return spec.astype(np.float32)
-
-
-def cache_key(path: Path, start: int, chunk_size: int, nfft: int, hop: int, max_time_frames: int) -> str:
-    text = f"{path.resolve()}|{start}|{chunk_size}|{nfft}|{hop}|{max_time_frames}"
-    return hashlib.md5(text.encode("utf-8")).hexdigest()
+    return mag.astype(np.float32)
 
 
-class IQSTFTDataset(Dataset):
+class IQFFTDataset(Dataset):
     def __init__(
         self,
         files: list[Path],
         labels: list[int],
         chunk_size: int,
         nfft: int,
-        hop: int,
         max_chunks_per_file: int,
-        max_time_frames: int = 0,
-        cache_dir: Path | None = None,
     ):
         self.files = files
         self.labels = labels
         self.chunk_size = chunk_size
         self.nfft = nfft
-        self.hop = hop
-        self.max_time_frames = max_time_frames
-        self.cache_dir = cache_dir
-
-        if cache_dir is not None:
-            cache_dir.mkdir(parents=True, exist_ok=True)
-
         self.samples: list[tuple[Path, int, int]] = []
 
         for path, label in zip(files, labels):
@@ -195,12 +142,11 @@ class IQSTFTDataset(Dataset):
             num_chunks = total_complex // chunk_size
 
             if num_chunks <= 0:
-                print(f"Skipping short file: {path}")
                 continue
 
             starts = [i * chunk_size for i in range(num_chunks)]
 
-            # Sample evenly across the whole file instead of only taking the beginning
+            # Sample chunks evenly across the whole IQ file instead of only using the beginning
             if max_chunks_per_file > 0 and len(starts) > max_chunks_per_file:
                 idxs = np.linspace(0, len(starts) - 1, max_chunks_per_file, dtype=int)
                 starts = [starts[i] for i in idxs]
@@ -217,66 +163,43 @@ class IQSTFTDataset(Dataset):
     def __getitem__(self, idx):
         path, start, label = self.samples[idx]
 
-        feature = None
+        iq = read_iq_chunk(path, start, self.chunk_size)
+        feature = iq_to_fft_feature(iq, self.nfft)
 
-        if self.cache_dir is not None:
-            key = cache_key(path, start, self.chunk_size, self.nfft, self.hop, self.max_time_frames)
-            cache_path = self.cache_dir / f"{key}.npy"
+        # Shape for Conv1D: [channels, length]
+        feature = torch.tensor(feature, dtype=torch.float32).unsqueeze(0)
+        label = torch.tensor(label, dtype=torch.long)
 
-            if cache_path.exists():
-                feature = np.load(cache_path).astype(np.float32)
-
-        if feature is None:
-            iq = read_iq_chunk(path, start, self.chunk_size)
-            feature = iq_to_stft_feature(
-                iq,
-                nfft=self.nfft,
-                hop=self.hop,
-                max_time_frames=self.max_time_frames,
-            )
-
-            if self.cache_dir is not None:
-                np.save(cache_path, feature)
-
-        # Shape for Conv2D: [channels, freq, time]
-        feature_tensor = torch.tensor(feature, dtype=torch.float32).unsqueeze(0)
-        label_tensor = torch.tensor(label, dtype=torch.long)
-
-        return feature_tensor, label_tensor
+        return feature, label
 
 
-class SmallSTFT2DCNN(nn.Module):
+class SmallFFT1DCNN(nn.Module):
     def __init__(self, num_classes: int):
         super().__init__()
 
-        self.features = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=5, stride=1, padding=2),
-            nn.BatchNorm2d(16),
+        self.net = nn.Sequential(
+            nn.Conv1d(1, 16, kernel_size=9, stride=2, padding=4),
+            nn.BatchNorm1d(16),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.MaxPool1d(2),
 
-            nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(32),
+            nn.Conv1d(16, 32, kernel_size=7, stride=2, padding=3),
+            nn.BatchNorm1d(32),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.MaxPool1d(2),
 
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
+            nn.Conv1d(32, 64, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm1d(64),
             nn.ReLU(),
 
-            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.AdaptiveAvgPool1d(1),
         )
 
-        self.classifier = nn.Linear(128, num_classes)
+        self.classifier = nn.Linear(64, num_classes)
 
     def forward(self, x):
-        x = self.features(x)
-        x = x.flatten(1)
+        x = self.net(x)
+        x = x.squeeze(-1)
         return self.classifier(x)
 
 
@@ -297,8 +220,6 @@ def collect_files(data_root: Path, class_names: list[str]):
 
         if len(class_files) == 0:
             raise RuntimeError(f"No IQ files found in {class_dir}")
-
-        print(f"{class_name}: {len(class_files)} files")
 
         files.extend(class_files)
         labels.extend([label] * len(class_files))
@@ -363,15 +284,40 @@ def evaluate(model, loader, criterion, device):
     return total_loss / total, correct / total, np.array(all_labels), np.array(all_preds)
 
 
+# def save_confusion_matrix(y_true, y_pred, class_names, save_path: Path):
+#     cm = confusion_matrix(y_true, y_pred)
+
+#     fig, ax = plt.subplots(figsize=(7, 6))
+#     im = ax.imshow(cm)
+
+#     ax.set_title("FFT-based UAV Classifier Confusion Matrix")
+#     ax.set_xlabel("Predicted label")
+#     ax.set_ylabel("True label")
+
+#     ax.set_xticks(np.arange(len(class_names)))
+#     ax.set_yticks(np.arange(len(class_names)))
+#     ax.set_xticklabels(class_names, rotation=45, ha="right")
+#     ax.set_yticklabels(class_names)
+
+#     for i in range(len(class_names)):
+#         for j in range(len(class_names)):
+#             ax.text(j, i, str(cm[i, j]), ha="center", va="center")
+
+#     fig.colorbar(im, ax=ax)
+#     fig.tight_layout()
+#     fig.savefig(save_path, dpi=200)
+#     plt.close(fig)
+
 def save_confusion_matrix(y_true, y_pred, class_names, save_path: Path):
     cm = confusion_matrix(y_true, y_pred)
-    row_sums = cm.sum(axis=1, keepdims=True)
-    cm_norm = cm.astype(np.float32) / np.maximum(row_sums, 1)
+
+    # Normalize by true class row
+    cm_norm = cm.astype(np.float32) / cm.sum(axis=1, keepdims=True)
 
     fig, ax = plt.subplots(figsize=(7, 6))
     im = ax.imshow(cm_norm, vmin=0.0, vmax=1.0)
 
-    ax.set_title("Normalized STFT-based UAV Classifier Confusion Matrix")
+    ax.set_title("Normalized FFT-based UAV Classifier Confusion Matrix")
     ax.set_xlabel("Predicted label")
     ax.set_ylabel("True label")
 
@@ -397,88 +343,155 @@ def save_confusion_matrix(y_true, y_pred, class_names, save_path: Path):
     fig.savefig(save_path, dpi=200)
     plt.close(fig)
 
+def get_executable_line() -> str:
+    return " ".join(shlex.quote(x) for x in [sys.executable] + sys.argv)
 
-def write_experiment_config(args, output_dir: Path, class_names: list[str], train_len: int, valid_len: int):
+
+def write_experiment_config(
+    args,
+    output_dir: Path,
+    class_names: list[str],
+    train_len: int,
+    valid_len: int,
+    total_files: int,
+    best_valid_acc: float | None = None,
+    best_epoch: int | None = None,
+):
+    """
+    Write a comparable experiment_config.txt.
+
+    This uses the same layout as the STFT script:
+        1. Executable Line
+        2. Dataset
+        3. Feature Settings
+        4. Training Settings
+        5. Output
+        6. Results
+    """
     config_path = output_dir / "experiment_config.txt"
 
     with open(config_path, "w", encoding="utf-8") as f:
-        f.write("STFT IQ Classifier Experiment Config\n")
-        f.write("====================================\n\n")
+        f.write("FFT IQ Classifier Experiment Config\n")
+        f.write("===================================\n\n")
+
+        f.write("Executable Line\n")
+        f.write("---------------\n")
+        f.write(get_executable_line() + "\n\n")
+
+        f.write("Dataset\n")
+        f.write("-------\n")
         f.write(f"classes: {class_names}\n")
         f.write(f"data_root: {args.data_root}\n")
+        f.write(f"total_iq_files: {total_files}\n")
+        f.write(f"train_chunks: {train_len}\n")
+        f.write(f"valid_chunks: {valid_len}\n\n")
+
+        f.write("Feature Settings\n")
+        f.write("----------------\n")
+        f.write("feature_family: FFT\n")
+        f.write("feature_type: log-magnitude FFT\n")
         f.write(f"chunk_size: {args.chunk_size}\n")
         f.write(f"nfft: {args.nfft}\n")
-        f.write(f"hop: {args.hop}\n")
-        f.write(f"max_time_frames: {args.max_time_frames}\n")
+        f.write("hop: N/A\n")
+        f.write("max_time_frames: N/A\n")
+        f.write("window: Hann\n")
+        f.write("normalization: DC removal + power normalization + per-sample standardization\n")
         f.write(f"max_chunks_per_file: {args.max_chunks_per_file}\n")
+        f.write("cache_dir: N/A\n\n")
+
+        f.write("Training Settings\n")
+        f.write("-----------------\n")
+        f.write("model: SmallFFT1DCNN\n")
         f.write(f"epochs: {args.epochs}\n")
         f.write(f"batch_size: {args.batch_size}\n")
-        f.write(f"lr: {args.lr}\n")
+        f.write(f"learning_rate: {args.lr}\n")
         f.write(f"valid_ratio: {args.valid_ratio}\n")
-        f.write(f"train_chunks: {train_len}\n")
-        f.write(f"valid_chunks: {valid_len}\n")
-        f.write(f"cache_dir: {args.cache_dir}\n")
+        f.write(f"seed: {args.seed}\n")
+        f.write("num_workers: 0\n\n")
+
+        f.write("Output\n")
+        f.write("------\n")
+        f.write(f"output_dir: {output_dir}\n")
+        f.write("saved_model: best_fft_1dcnn.pt\n")
+        f.write("confusion_matrix: confusion_matrix.png\n")
+        f.write("classification_report: classification_report.txt\n")
+        f.write("experiment_config: experiment_config.txt\n\n")
+
+        f.write("Results\n")
+        f.write("-------\n")
+        if best_valid_acc is None:
+            f.write("best_valid_accuracy: pending\n")
+        else:
+            f.write(f"best_valid_accuracy: {best_valid_acc:.4f}\n")
+
+        if best_epoch is None:
+            f.write("best_epoch: pending\n")
+        else:
+            f.write(f"best_epoch: {best_epoch}\n")
 
 
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--data-root", type=str, required=True)
+    parser.add_argument("--data-root", type=str, required=None)
     parser.add_argument(
         "--classes",
         nargs="+",
-        default=["YUNZHUO-H12", "YUNZHUO-H16", "YUNZHUO-H30"],
+        default=["YunZhuo-H12", "YunZhuo-H16", "YunZhuo-H30"],
     )
 
-    parser.add_argument("--chunk-size", type=int, default=32768)
-    parser.add_argument("--nfft", type=int, default=512)
-    parser.add_argument("--hop", type=int, default=128)
-    parser.add_argument("--max-time-frames", type=int, default=0)
-
-    parser.add_argument("--max-chunks-per-file", type=int, default=300)
+    parser.add_argument("--chunk-size", type=int, default=4096)
+    parser.add_argument("--nfft", type=int, default=4096)
+    parser.add_argument("--max-chunks-per-file", type=int, default=100)
 
     parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--valid-ratio", type=float, default=0.2)
 
-    parser.add_argument("--output-dir", type=str, default="stft_baseline")
-    parser.add_argument("--cache-dir", type=str, default="")
+    parser.add_argument("--output-dir", type=str, default="outputs_fft")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--num-workers", type=int, default=0)
+
+    parser.add_argument("--config", type=str, default=None, help="Path to YAML config file")
+    config_args, remaining_args = parser.parse_known_args()
+    yaml_config = load_yaml_config(config_args.config)
+
+    parser.set_defaults(**yaml_config)
 
     args = parser.parse_args()
 
-    if args.chunk_size < args.nfft:
-        raise ValueError("--chunk-size must be >= --nfft")
+    if args.data_root is None:
+        parser.error("the following arguments are required: --data-root")
+
 
     set_seed(args.seed)
 
     data_root = Path(args.data_root)
-    output_dir = safe_output_dir(args.output_dir)
+    # Always place experiment outputs inside output_iq/
+    output_root = Path("output_iq")
+    requested_output = Path(args.output_dir)
 
-    cache_dir = None
-    if args.cache_dir:
-        cache_dir = Path(args.cache_dir)
-        if not cache_dir.is_absolute():
-            cache_dir = output_dir / cache_dir
+    # If user already wrote output_iq/..., do not duplicate it
+    if requested_output.parts and requested_output.parts[0] == output_root.name:
+        output_dir = requested_output
+    else:
+        output_dir = output_root / requested_output
+
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     class_names = args.classes
     print("Classes:", class_names)
-    print("Output dir:", output_dir)
 
     files, labels = collect_files(data_root, class_names)
+
     print(f"Total IQ files: {len(files)}")
 
-    full_ds = IQSTFTDataset(
+    full_ds = IQFFTDataset(
         files,
         labels,
         chunk_size=args.chunk_size,
         nfft=args.nfft,
-        hop=args.hop,
         max_chunks_per_file=args.max_chunks_per_file,
-        max_time_frames=args.max_time_frames,
-        cache_dir=cache_dir,
     )
 
     sample_labels = [label for _, _, label in full_ds.samples]
@@ -497,36 +510,40 @@ def main():
     print(f"Train chunks: {len(train_ds)}")
     print(f"Valid chunks: {len(valid_ds)}")
 
-    # Show spectrogram tensor shape once
-    x0, y0 = full_ds[0]
-    print(f"Example input tensor shape: {tuple(x0.shape)}  # [channel, freq, time]")
+    write_experiment_config(
+        args,
+        output_dir,
+        class_names,
+        len(train_ds),
+        len(valid_ds),
+        total_files=len(files),
+    )
+
 
     train_loader = DataLoader(
         train_ds,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=args.num_workers,
+        num_workers=0,
     )
 
     valid_loader = DataLoader(
         valid_ds,
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=args.num_workers,
+        num_workers=0,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device:", device)
 
-    model = SmallSTFT2DCNN(num_classes=len(class_names)).to(device)
+    model = SmallFFT1DCNN(num_classes=len(class_names)).to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     best_valid_acc = 0.0
     best_epoch = -1
-
-    write_experiment_config(args, output_dir, class_names, len(train_ds), len(valid_ds))
 
     for epoch in range(args.epochs):
         train_loss, train_acc = train_one_epoch(
@@ -548,8 +565,7 @@ def main():
         if valid_acc > best_valid_acc:
             best_valid_acc = valid_acc
             best_epoch = epoch + 1
-
-            torch.save(model.state_dict(), output_dir / "best_stft_2dcnn.pt")
+            torch.save(model.state_dict(), output_dir / "best_fft_1dcnn.pt")
 
             save_confusion_matrix(
                 y_true,
@@ -558,24 +574,32 @@ def main():
                 output_dir / "confusion_matrix.png",
             )
 
-            with open(output_dir / "classification_report.txt", "w", encoding="utf-8") as f:
+            with open(output_dir / "classification_report.txt", "w") as f:
                 f.write(
                     classification_report(
                         y_true,
                         y_pred,
                         target_names=class_names,
-                        zero_division=0,
                     )
                 )
+                
+    write_experiment_config(
+        args,
+        output_dir,
+        class_names,
+        len(train_ds),
+        len(valid_ds),
+        total_files=len(files),
+        best_valid_acc=best_valid_acc,
+        best_epoch=best_epoch,
+    )
 
     print()
     print("Done.")
     print(f"Best valid accuracy: {best_valid_acc:.4f}")
-    print(f"Best epoch: {best_epoch}")
-    print(f"Saved model to: {output_dir / 'best_stft_2dcnn.pt'}")
+    print(f"Saved model to: {output_dir / 'best_fft_1dcnn.pt'}")
     print(f"Saved confusion matrix to: {output_dir / 'confusion_matrix.png'}")
     print(f"Saved report to: {output_dir / 'classification_report.txt'}")
-    print(f"Saved config to: {output_dir / 'experiment_config.txt'}")
 
 
 if __name__ == "__main__":
