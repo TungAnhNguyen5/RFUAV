@@ -39,6 +39,7 @@ res/
 benchmark_results/
 runs/
 logs/
+rfuav_yolo/
 
 output_iq/
 *.pt
