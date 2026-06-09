@@ -10,6 +10,7 @@ __pycache__/
 # Datasets / raw data
 dataset/
 dataset_backup/
+dataset_6class/
 dataset_iq/
 benchmark_data/
 RFUAV_subset/
@@ -45,3 +46,4 @@ output_iq/
 *.pt
 cache/
 *.npy
+ImageSet-AllDrones-MatlabPipeline/

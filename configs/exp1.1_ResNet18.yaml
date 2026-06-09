@@ -1,17 +1,22 @@
 train: dataset/train
 val: dataset/valid
+
 save_path: models/exp1.1_ResNet18
 model : resnet18
 weights: None
+
 batch_size: 16
 image_size: 224
+
 num_classes: 3
 class_names:
   YunZhuo-H12: 0
   YunZhuo-H16: 1
   YunZhuo-H30: 2
-device: 'cpu'
-num_epochs: 5
-shuffle: True
+
+device: "cpu"
+num_epochs: 3
+
+shuffle: False
 lr: 0.0001
-optimizer: None
+optimizer: AdamW
