@@ -42,6 +42,9 @@ runs/
 logs/
 rfuav_yolo/
 
+# API keys and credentials
+notebook_for_google_colab/Kaggle.md
+
 output_iq/
 *.pt
 cache/
