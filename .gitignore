@@ -43,10 +43,10 @@ logs/
 rfuav_yolo/
 
 # API keys and credentials
-notebook_for_google_colab/Kaggle.md
+Kaggle.md
 
 output_iq/
 *.pt
 cache/
 *.npy
-ImageSet-AllDrones-MatlabPipeline/
+ImageSet-AllDrones-MatlabPipeline/notebook_for_google_colab/kaggle_notebook/Kaggle.md
