@@ -49,4 +49,3 @@ output_iq/
 *.pt
 cache/
 *.npy
-ImageSet-AllDrones-MatlabPipeline/notebook_for_google_colab/kaggle_notebook/Kaggle.md
