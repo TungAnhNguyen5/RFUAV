@@ -1,6 +1,6 @@
-train:
-val:
-save_path:
+train: dataset/train
+val: dataset/valid
+save_path: models/exp1.4_ResNet101
 model : resnet101
 weights: None
 batch_size: 8
@@ -13,8 +13,8 @@ class_names: [
         'DJIMINI3',
         'DJIMINI4PRO',
 ]
-device: 'cuda'
-num_epochs: 150
+device: 'cpu'
+num_epochs: 5
 shuffle: True
 lr: 0.00001
 optimizer: None

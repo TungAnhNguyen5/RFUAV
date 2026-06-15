@@ -1,0 +1,51 @@
+batch_size: 256
+class_names:
+  DAUTEL EVO nano: 0
+  DEVENTION DEVO: 1
+  DJI AVATA2: 2
+  DJI FPV COMBO: 3
+  DJI MAVIC3 PRO: 4
+  DJI MINI3: 5
+  DJI MINI4 PRO: 6
+  FLYSKY EL 18: 7
+  FLYSKY FS I6X: 8
+  FLYSKY NV 14: 9
+  FRSKY-X14: 10
+  FRSKY-X20R: 11
+  FRSKY-X9DP2019: 12
+  FUTABA-T10J: 13
+  FUTABA-T14SG: 14
+  FUTABA-T16IZ: 15
+  FUTABA-T18SZ: 16
+  Herelink-Hx4: 17
+  JR PROPO XG14: 18
+  JR PROPO XG7: 19
+  JUMPER-T14: 20
+  JUMPER-TProV2: 21
+  RadioMaster BOXER: 22
+  RadioMaster TX16S: 23
+  Radiolink AT10 II: 24
+  Radiolink AT9S Pro: 25
+  SIYI FT24: 26
+  SIYI MK15: 27
+  SIYI MK32: 28
+  SKYDROID-H12: 29
+  SKYDROID-T10: 30
+  WFLY ET10: 31
+  WFLY ET16S: 32
+  WFLY WFT09SII: 33
+  YunZhuo-H12: 34
+  YunZhuo-H16: 35
+  YunZhuo-H30: 36
+device: cpu
+image_size: 224
+lr: 1.0e-05
+model: resnet18
+num_classes: 37
+num_epochs: 3
+optimizer: None
+save_path: models/exp3.1_ResNet18
+shuffle: true
+train: dataset/train
+val: dataset/valid
+weights: models/exp3.1_ResNet18/best_model.pth

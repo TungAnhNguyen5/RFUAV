@@ -7,8 +7,8 @@ def main():
 
      # doing a inference on spectrogram image or binary raw frequency data pack using the trained classify model
     source = './dataset/valid/YunZhuo-H16'  # for inference test
-    test = Classify_Model(cfg='./configs/exp1.2_ResNet34.yaml',
-                          weight_path='./models/exp1.2_ResNet34/best_model.pth')
+    test = Classify_Model(cfg='./configs/exp3.1_ResNet18.yaml',
+                          weight_path='./models/exp3.1_ResNet18/best_model.pth')
     test.inference(source=source, save_path='./res/')  # for inference test
 
     # # doing a two-stage detector inference on the binary raw frequency data pack using the trained detector and classify model

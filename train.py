@@ -13,7 +13,7 @@ def main():
 
     # classification Trainer
     # Make the file path of the model name
-    model = CustomTrainer(cfg='./configs/exp3.1_ResNet18.yaml')
+    model = CustomTrainer(cfg='./configs/exp1.4_ResNet101.yaml')
     model.train()
 
     # # Detection Trainer

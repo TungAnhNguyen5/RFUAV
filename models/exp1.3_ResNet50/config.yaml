@@ -1,0 +1,17 @@
+batch_size: 4
+class_names:
+  YunZhuo-H12: 0
+  YunZhuo-H16: 1
+  YunZhuo-H30: 2
+device: cpu
+image_size: 224
+lr: 1.0e-05
+model: resnet50
+num_classes: 3
+num_epochs: 3
+optimizer: None
+save_path: models/exp1.3_ResNet50
+shuffle: true
+train: dataset/train
+val: dataset/valid
+weights: None

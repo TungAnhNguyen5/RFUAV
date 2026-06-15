@@ -1,0 +1,20 @@
+batch_size: 8
+class_names:
+  DJI MINI4 PRO: 0
+  FLYSKY FS I6X: 1
+  WFLY WFT09SII: 2
+  YunZhuo-H12: 3
+  YunZhuo-H16: 4
+  YunZhuo-H30: 5
+device: cpu
+image_size: 224
+lr: 0.0001
+model: resnet18
+num_classes: 6
+num_epochs: 5
+optimizer: AdamW
+save_path: models/compare_ResNet18_6class
+shuffle: true
+train: dataset/train
+val: dataset/valid
+weights: None

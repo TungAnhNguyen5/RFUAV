@@ -3,7 +3,7 @@ val: dataset/valid
 
 save_path: models/exp3.1_ResNet18
 model : resnet18
-weights: None
+weights: models/exp3.1_ResNet18/best_model.pth
 batch_size: 256
 image_size: 224
 num_classes: 37

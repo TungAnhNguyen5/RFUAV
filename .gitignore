@@ -28,7 +28,7 @@ RFUAV_subset/
 *.tar.gz
 
 # Model checkpoints / trained weights
-models/
+
 checkpoints/
 *.pth
 *.pt
