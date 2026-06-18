@@ -209,3 +209,59 @@
 2026-06-08 15:37:45,353 - Train - Loading dataset from: dataset/train and dataset/valid
 2026-06-08 15:37:45,401 - Train - Saving yaml file at models/exp1.2_ResNet34
 2026-06-08 15:37:45,401 - Train - Epoch [1/3] started.
+2026-06-18 08:32:57,897 - Train - Loading model: resnet34
+2026-06-18 08:33:07,364 - Train - resnet34 loaded onto device: cpu
+2026-06-18 08:33:07,365 - Train - Loading dataset from: dataset/train and dataset/valid
+2026-06-18 08:33:07,525 - Train - Saving yaml file at models/exp1.2_ResNet34
+2026-06-18 08:33:07,525 - Train - Epoch [1/5] started.
+2026-06-18 08:47:57,366 - Train - Epoch [1/5], Train Loss: 3.5466, Train Accuracy: 16.55%
+2026-06-18 08:47:57,377 - Train - Starting validation...
+2026-06-18 09:03:43,393 - Train -  Validation Loss: 9.7929,
+2026-06-18 09:03:43,394 - Train -  Validation Accuracy: 4.14%,
+2026-06-18 09:03:43,394 - Train -  Validation macro_F1: 0.01120965922397755
+2026-06-18 09:03:43,394 - Train -  Validation micro_F1: 0.041399373414888856
+2026-06-18 09:03:43,394 - Train -  Validation mAP: 3.9032
+2026-06-18 09:03:43,394 - Train -  Validation Top-k Accuracy: {'top1': 0.04139937460422516, 'top2': 0.10629568994045258, 'top3': 0.1283753514289856}
+2026-06-18 09:03:43,394 - Train - Model saved at models/exp1.2_ResNet34/ResNet_epoch_1.pth (Validation Accuracy: 4.14%)
+2026-06-18 09:03:46,176 - Train - New best model saved with Accuracy: 4.14%
+2026-06-18 09:03:46,176 - Train - Epoch [2/5] started.
+2026-06-18 09:18:10,639 - Train - Epoch [2/5], Train Loss: 3.1840, Train Accuracy: 20.69%
+2026-06-18 09:18:10,639 - Train - Starting validation...
+2026-06-18 09:34:40,484 - Train -  Validation Loss: 21.5721,
+2026-06-18 09:34:40,484 - Train -  Validation Accuracy: 1.64%,
+2026-06-18 09:34:40,484 - Train -  Validation macro_F1: 0.002482276165865531
+2026-06-18 09:34:40,484 - Train -  Validation micro_F1: 0.016410562434730717
+2026-06-18 09:34:40,484 - Train -  Validation mAP: 3.8825
+2026-06-18 09:34:40,484 - Train -  Validation Top-k Accuracy: {'top1': 0.01641056314110756, 'top2': 0.07354915887117386, 'top3': 0.16619424521923065}
+2026-06-18 09:34:40,485 - Train - Model saved at models/exp1.2_ResNet34/ResNet_epoch_2.pth (Validation Accuracy: 1.64%)
+2026-06-18 09:34:41,800 - Train - Epoch [3/5] started.
+2026-06-18 09:52:05,621 - Train - Epoch [3/5], Train Loss: 3.1732, Train Accuracy: 20.18%
+2026-06-18 09:52:05,621 - Train - Starting validation...
+2026-06-18 10:09:20,428 - Train -  Validation Loss: 27.2097,
+2026-06-18 10:09:20,428 - Train -  Validation Accuracy: 1.10%,
+2026-06-18 10:09:20,428 - Train -  Validation macro_F1: 0.004346116312334104
+2026-06-18 10:09:20,428 - Train -  Validation micro_F1: 0.011039832910637029
+2026-06-18 10:09:20,428 - Train -  Validation mAP: 4.682
+2026-06-18 10:09:20,428 - Train -  Validation Top-k Accuracy: {'top1': 0.01103983260691166, 'top2': 0.036327019333839417, 'top3': 0.09189914911985397}
+2026-06-18 10:09:20,428 - Train - Model saved at models/exp1.2_ResNet34/ResNet_epoch_3.pth (Validation Accuracy: 1.10%)
+2026-06-18 10:09:21,037 - Train - Epoch [4/5] started.
+2026-06-18 10:32:52,557 - Train - Epoch [4/5], Train Loss: 3.1333, Train Accuracy: 19.07%
+2026-06-18 10:32:52,611 - Train - Starting validation...
+2026-06-18 10:53:11,830 - Train -  Validation Loss: 3.6331,
+2026-06-18 10:53:11,884 - Train -  Validation Accuracy: 6.39%,
+2026-06-18 10:53:11,884 - Train -  Validation macro_F1: 0.010712385613960417
+2026-06-18 10:53:11,884 - Train -  Validation micro_F1: 0.06385200656422498
+2026-06-18 10:53:11,884 - Train -  Validation mAP: 4.4579
+2026-06-18 10:53:11,884 - Train -  Validation Top-k Accuracy: {'top1': 0.06385200470685959, 'top2': 0.09906012564897537, 'top3': 0.14478591084480286}
+2026-06-18 10:53:11,884 - Train - Model saved at models/exp1.2_ResNet34/ResNet_epoch_4.pth (Validation Accuracy: 6.39%)
+2026-06-18 10:53:17,243 - Train - New best model saved with Accuracy: 6.39%
+2026-06-18 10:53:17,243 - Train - Epoch [5/5] started.
+2026-06-18 11:10:34,364 - Train - Epoch [5/5], Train Loss: 3.0172, Train Accuracy: 23.26%
+2026-06-18 11:10:34,364 - Train - Starting validation...
+2026-06-18 11:28:17,424 - Train -  Validation Loss: 14.7973,
+2026-06-18 11:28:17,425 - Train -  Validation Accuracy: 1.63%,
+2026-06-18 11:28:17,425 - Train -  Validation macro_F1: 0.004790725054765682
+2026-06-18 11:28:17,426 - Train -  Validation micro_F1: 0.016335968969118306
+2026-06-18 11:28:17,426 - Train -  Validation mAP: 4.3544
+2026-06-18 11:28:17,426 - Train -  Validation Top-k Accuracy: {'top1': 0.016335969790816307, 'top2': 0.03401461988687515, 'top3': 0.11487393826246262}
+2026-06-18 11:28:17,426 - Train - Model saved at models/exp1.2_ResNet34/ResNet_epoch_5.pth (Validation Accuracy: 1.63%)
